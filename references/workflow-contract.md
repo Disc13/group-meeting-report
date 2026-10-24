@@ -1,0 +1,79 @@
+# 输入、输出与整理契约
+
+## 材料
+
+prepare获取分享页与平台字稿，下载共享屏幕轨道或复用显式指定的录像。cw和crm的同一短码视为同一会议；目录名不是会议日期。无完整字稿时保存实际返回状态并停止，不生成无依据的整场发言。
+
+主要材料包括manifest.json、transcript.md/jsonl、captures/slides.json、reading-order.json、aligned.jsonl和material-packet.md。原件导入目录保存deck.json、文字和逐页PNG。platform speaker标签不等于核实过的人物身份。
+
+## meeting-structure.json
+
+presentations按实际汇报顺序排列。下面仅为合成字段示例：
+
+```json
+{
+  "presentations": [{
+    "id": "presenter-a",
+    "presenter": "汇报者A",
+    "title": "示例研究进展",
+    "kind": "研究进展",
+    "file_stem": "01-presenter-a",
+    "material_start_s": 0,
+    "material_end_s": 120,
+    "talk_start_s": 5,
+    "talk_end_s": 100,
+    "discussion_start_s": 100,
+    "discussion_end_s": 120
+  }],
+  "advisor_summary": {"speaker": "导师", "start_s": 120, "end_s": 150}
+}
+```
+
+时间为录像起点秒数。材料窗连续、不重叠，并包含本人的问答回翻；分组按所有实际展示区间，不能只按一张代表图首次出现的时间。可加reference_dir指定原件目录，interruptions记录中途提问，advisor_opening记录已收录的开场。日期应有材料依据，不明时注明，不用处理当天冒充。
+
+## 逐页图片
+
+select_images.py生成captures/image-selection.json候选。Agent核对短章节、编辑器重复和动态演示后，写included列表、reviewed:true以及当前slides.json的SHA256。元数据改变后重审。families可将同一页其他capture ID归入代表页，以保留那些时间的发言。
+
+```sh
+python scripts/split_meeting.py meetings/example
+```
+
+output/images/按人保存图片与索引，sections/*.json保留全部区间。原件匹配成功时直接用原件渲染图，否则用录像图。原文件保留，不以恢复页数证明未提供原件的PPT完整。--pdf、--pptx为可选导出。
+
+## 鼠标编号
+
+```sh
+python scripts/annotate_slides.py query meetings/example/captures '00:00:10' --window 4
+python scripts/annotate_slides.py render meetings/example/captures meetings/example/annotation-plan.json
+```
+
+先查附近的候选和句子，按需查看该时刻采样帧，确认指代后写计划。以下编号和时间也完全是示例：
+
+```json
+{"pages":[{"page_id":"capture-001","points":[
+  {"number":1,"time_s":10,"utterance_id":"demo-utterance","reviewed":true,"label_offset":[50,12]}
+]}]}
+```
+
+reviewed表示Agent已核对该帧与语句，不要求用户逐点批准。脚本检查唯一候选、语句时间、页面家族、ORB/RANSAC几何一致性，再画编号和引线。label_offset只移动号码，不改变证据坐标。原图保留，annotations.json记录时间、句子、坐标、配准统计和来源哈希。候选不足时留缺，不猜位置或推断点击、身份。
+
+## 报告与人物提要
+
+组会报告.md每人包含简短介绍、逐页图文润色稿及中途/末尾问答，最后整理导师开场和结束发言。附录标题为`## 材料与核查范围`。也可写组会讲稿源稿.md，用`![页名](slide:capture-001)`引用图片，再用render_report.py解析实际路径并检查页序和覆盖。
+
+人物汇报提要.json顶层字段：schema_version、meeting_id、meeting_date、updated、title、date_basis、presenters。每人字段如下：
+
+- name、presentation_id：与结构一致。
+- report_heading：正文真实二级标题，用于锚点。
+- title、kind、directions：本次内容与有证据的研究主题。
+- summary、progress：内容与当时完成状态。
+- discussions、follow_up：字符串列表，保留提问及建议/计划/决定的区别；正文不另列行动表。
+- evidence_window：录像区间。
+- card.research、card.progress、card.open_question：各一至两句，说明研究内容、最近实绩和当前问题。
+
+## 可选Obsidian入库
+
+finish --vault将报告写入知识/组会、人物写入知识/人物、材料收入附件/组会。目录可用sync_obsidian.py的本地JSON配置调整。图片统一使用库内路径原生嵌入`![[附件/组会/日期/图/文件.png]]`，不用../../图片路径。
+
+同场重复运行更新，同一人物跨会议累积。日期不是唯一录制身份，同日另一次会议有冲突时先解决，不覆盖。维护区块外的手工补充保留，区块内手改会要求合并。脚本不修改插件、不创建Git提交、不推送。视频、全量采样、OCR及接口原始响应保留在会议工作目录。

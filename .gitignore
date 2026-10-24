@@ -1,0 +1,22 @@
+# Default-deny source allowlist: runtime meeting data must never be staged.
+*
+!/.gitignore
+!/.gitattributes
+!/README.md
+!/LICENSE
+!/SKILL.md
+!/requirements.txt
+!/agents/
+!/agents/openai.yaml
+!/references/
+!/references/environment.md
+!/references/workflow-contract.md
+!/references/privacy.md
+!/references/runtime.example.json
+!/scripts/
+!/scripts/*.py
+!/scripts/*.mjs
+!/scripts/*.ps1
+!/scripts/agent-report-prompt.md
+!/tests/
+!/tests/test_*.py

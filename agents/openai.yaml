@@ -1,0 +1,4 @@
+interface:
+  display_name: "组会报告与人物名片"
+  short_description: "逐页插图润色组会讲稿，整理问答与导师发言，更新Obsidian研究名片"
+  default_prompt: "使用 $group-meeting-report 整理这个腾讯会议链接，直接输出逐页图片，按每页发言生成易懂的图文润色稿，保留中途和末尾问答、导师开场与总结，并更新Obsidian人物名片。"

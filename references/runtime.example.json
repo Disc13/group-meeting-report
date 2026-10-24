@@ -1,0 +1,12 @@
+{
+  "python": null,
+  "ffmpeg": "ffmpeg",
+  "cv_deps": null,
+  "work_root": null,
+  "vault": null,
+  "soffice": null,
+  "node": "node",
+  "node_modules": null,
+  "pdf_python": null,
+  "presentation_skill": null
+}

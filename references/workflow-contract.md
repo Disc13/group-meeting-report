@@ -33,7 +33,7 @@ presentations按实际汇报顺序排列。下面仅为合成字段示例：
 
 ## 逐页图片
 
-select_images.py生成captures/image-selection.json候选。Agent核对短章节、编辑器重复和动态演示后，写included列表、reviewed:true以及当前slides.json的SHA256。元数据改变后重审。families可将同一页其他capture ID归入代表页，以保留那些时间的发言。
+select_images.py生成captures/image-selection.json候选。材料包只自动合并同一capture的再次出现或已验证匹配到同一原件页的候选，不按OCR相似度或相同页眉合并不同页面；少字图表进入needs_review而不直接删除。Agent核对短章节、编辑器重复和动态演示后，写included列表、reviewed:true以及当前slides.json的SHA256。元数据改变后重审。families仅将核对后确认同一页的其他capture ID归入代表页，以保留那些时间的发言。
 
 ```sh
 python scripts/split_meeting.py meetings/example
@@ -61,6 +61,8 @@ reviewed表示Agent已核对该帧与语句，不要求用户逐点批准。脚�
 ## 报告与人物提要
 
 组会报告.md每人包含简短介绍、逐页图文润色稿及中途/末尾问答，最后整理导师开场和结束发言。附录标题为`## 材料与核查范围`。也可写组会讲稿源稿.md，用`![页名](slide:capture-001)`引用图片，再用render_report.py解析实际路径并检查页序和覆盖。
+
+每个问答议题依次包含现场问题（提问者与时间）、现场回应（回答及补充）、AI补充解答（非现场发言）。AI直接回答并解释依据，现场原意与外部纠正分开；需要核查的论文、争议或时效结论查原论文/官方资料并给来源，缺少数据时说明条件。AI段不冒充有录像时间的发言，不把建议或推断当作人物成果或导师决定。完整格式见scripts/agent-report-prompt.md，仍在每人问答内，不另增第三个主体章节。
 
 人物汇报提要.json顶层字段：schema_version、meeting_id、meeting_date、updated、title、date_basis、presenters。每人字段如下：
 

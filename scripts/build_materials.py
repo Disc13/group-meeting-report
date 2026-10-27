@@ -1,5 +1,5 @@
 """Combine source text, OCR and timeline; select readable capture representatives."""
-import argparse,collections,json,re
+import argparse,json,re
 from pathlib import Path
 
 
@@ -7,9 +7,20 @@ def normalize(text):
     return ''.join(re.findall(r'[\w\u4e00-\u9fff]+',text)).lower()
 
 
-def tokens(text):
-    value=normalize(text)
-    return {value[i:i+3] for i in range(max(0,len(value)-2))}
+def group_occurrences(intervals):
+    """Only merge repeated captures or verified matches to one original page.
+
+    Shared text and headers cannot establish slide identity: experiment tables,
+    chapter pages and animation steps often have almost identical OCR.
+    """
+    groups={}
+    for row in intervals:
+        ref=row.get('reference') or {}
+        page=ref.get('page') if ref.get('status')=='matched' else None
+        key=('reference',page) if page is not None else ('capture',row['page_id'])
+        group=groups.setdefault(key,{'reference_page':page,'rows':[]})
+        group['rows'].append(row)
+    return list(groups.values())
 
 
 def run(root,reference,output=None):
@@ -24,48 +35,13 @@ def run(root,reference,output=None):
     native={}
     if reference:
         native={p['page']:p for p in json.loads((reference/'deck.json').read_text('utf8'))['pages']}
-    groups=[];excluded=[]
+    needs_review=[]
     for row in data['intervals']:
-        text=ocr.get(row['page_id'],'');ref=row.get('reference') or {}
+        text=ocr.get(row['page_id'],'')
         if len(normalize(text))<12:
-            excluded.append({'interval_id':row['id'],'reason':'little_readable_text','page_id':row['page_id']});continue
-        signature=tokens(text)
-        target=None
-        for group in groups:
-            if ref.get('page') and group['reference_page']==ref['page']:
-                target=group;break
-            if not ref.get('page') and not group['reference_page']:
-                intersection=len(signature & group['tokens']);union=len(signature | group['tokens'])
-                if union and intersection/union>.76:
-                    target=group;break
-        if target is None:
-            target={'tokens':signature,'reference_page':ref.get('page'),'rows':[]};groups.append(target)
-        target['rows'].append(row)
+            needs_review.append({'interval_id':row['id'],'reason':'little_readable_text','page_id':row['page_id']})
+    groups=group_occurrences(data['intervals'])
     selected=[]
-    # Collapse sustained moving content under an unchanged page heading.
-    # Require >=5 separate visual groups to avoid collapsing ordinary pairs
-    # of slides sharing a title. All occurrence IDs/raw captures are retained.
-    from capture_slides import read_image,descriptor,difference
-    families=[]
-    for group in groups:
-        if group['reference_page']:
-            families.append([group]);continue
-        representative=group['rows'][0]
-        group['header']=descriptor(read_image(root/representative['image']))[:24]
-        first=min(row['start_s'] for row in group['rows'])
-        family=next((family for family in families
-                     if not family[0]['reference_page'] and 'header' in family[0]
-                     and difference(group['header'],family[0]['header'])<.002
-                     and abs(first-max(r['start_s'] for g in family for r in g['rows']))<180),None)
-        if family is None:families.append([group])
-        else:family.append(group)
-    groups=[]
-    for family in families:
-        if len(family)>=5:
-            family[0]['rows']=[row for group in family for row in group['rows']]
-            family[0]['moving_content_family']=True
-            groups.append(family[0])
-        else:groups.extend(family)
     for group in groups:
         def quality(row):
             text=normalize(ocr.get(row['page_id'],''))
@@ -77,8 +53,9 @@ def run(root,reference,output=None):
                              moving_content_family=group.get('moving_content_family',False),
                              occurrence_ids=[r['id'] for r in group['rows']],ocr=ocr.get(best['page_id'],'')))
     selected.sort(key=lambda r:r['first_shown_s'])
-    (output/'reading-order.json').write_text(json.dumps({'pages':selected,'excluded':excluded,
-        'note':'Reading selection uses OCR trigram overlap; original captures and every interval remain available.'},ensure_ascii=False,indent=2),encoding='utf8')
+    (output/'reading-order.json').write_text(json.dumps({'pages':selected,'excluded':[],
+        'needs_review':needs_review,
+        'note':'Distinct captures are retained without a verified shared original page. Review animations and return visits using image-selection.json families; little OCR is a review flag, not an exclusion.'},ensure_ascii=False,indent=2),encoding='utf8')
     reference_pages=sorted({r['reference']['page'] for r in data['intervals'] if r.get('reference') and r['reference'].get('page')})
     comparison={'source_pages':len(native),'matched_source_pages':reference_pages,
                 'missing_source_pages':sorted(set(native)-set(reference_pages)),

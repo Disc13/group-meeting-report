@@ -58,6 +58,30 @@ python scripts/annotate_slides.py render meetings/example/captures meetings/exam
 
 reviewed表示Agent已核对该帧与语句，不要求用户逐点批准。脚本检查唯一候选、语句时间、页面家族、ORB/RANSAC几何一致性，再画编号和引线。label_offset只移动号码，不改变证据坐标。原图保留，annotations.json记录时间、句子、坐标、配准统计和来源哈希。候选不足时留缺，不猜位置或推断点击、身份。
 
+## 内部指代检查与对话交付
+
+选页和分人图片导出完成后执行：
+
+```sh
+python scripts/review_references.py init meetings/example
+# Agent逐页填写reference-review.json，按需生成编号图并引用
+python scripts/review_references.py check meetings/example
+```
+
+init生成材料哈希和每个`(presentation_id, page_id)`的待审条目。保留生成的inputs，仅填写pages的判断；以下时间、句子与页ID均为虚构示例：
+
+```json
+{"presentation_id":"speaker-a","page_id":"capture-001",
+ "status":"annotated","reason":"两条曲线需要明确区分。",
+ "evidence":[{"time_s":10,"utterance_id":"demo-utterance"}]}
+```
+
+status为`annotated`、`unnecessary`或`insufficient_evidence`，reason必须说明本页的具体依据。对复杂图、多曲线及含混口头指代实际审阅；需要定位但证据不足时选insufficient_evidence，不能冒充无需标注。所有页面都要有判断，不设最低标注数量；无需定位的页可留空evidence。其余两类需给本汇报段对应页面的时间与字稿ID，已标注页列全所用编号点的时间/句子。
+
+check与finish验证条目覆盖、材料哈希、时间归属、编号源图/输出/采样帧哈希，以及最终本地报告中的图片顺序与编号解释。报告在入库前使用本地Markdown图片路径；编号1至20用①至⑳，较大的号用“编号21”等文字引用。已标注项必须真正生成`captures/annotated/annotations.json`及PNG，并在对应图片后的讲解中引用，不能仅写一个计划。源图或编号图变化后重新render；字稿、选页、结构或指针数据变化后重新审阅，用init --reset将旧决定清回待审。该检查核对产物一致性，不证明语义判断正确。
+
+内部reference-review.json留在会议工作目录，脚本不会将它写入报告或Obsidian正文。finish返回annotation_review_for_chat，Agent在**对话中**简述三类数量、代表页/时间及重要未标注原因；报告只呈现必要编号图和讲解，不放检查统计、清单或未标注原因附录。既有报告不会自动补改，重新finish时按新要求审阅。
+
 ## 报告与人物提要
 
 组会报告.md每人包含简短介绍、逐页图文润色稿及中途/末尾问答，最后整理导师开场和结束发言。附录标题为`## 材料与核查范围`。也可写组会讲稿源稿.md，用`![页名](slide:capture-001)`引用图片，再用render_report.py解析实际路径并检查页序和覆盖。

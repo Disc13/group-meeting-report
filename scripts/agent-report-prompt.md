@@ -45,13 +45,21 @@
 
 逐页正文读起来应像连贯的讲稿。关键缩写在首次影响理解处解释用途，不等到后面才定义。共通的材料限制集中放在开头或附录，个别结果确有差别时再就地注明，避免每页反复用“不能据此”“没有证明”等审稿式句子打断讲解。实质性的概念纠正明确标为整理者补充；与现场问题有关的详细解释放在AI补充解答中。
 
-## 按需脚本标注
+## 逐页检查与按需脚本标注
+
+导出图片后执行`python review_references.py init "会议目录"`。结合逐页发言和图片检查关键指代；复杂示意图、多曲线、多个相似模块，以及“这里、这个箭头”等需要定位的语句，都要实际判断能否仅凭文字明确对象。对需定位处查询定时候选并查看证据帧。整场没有编号可以成立，但须逐页审阅后有理由，不能将“脚本可用”当成已经检查。
+
+在内部reference-review.json中逐页填写status和reason：`annotated`（需要并已完成编号）、`unnecessary`（文字和图已能明确对应）、`insufficient_evidence`（有定位需要但候选或配准不足）。后两者不能互相掩盖。对已标注或证据不足的页，evidence记录`time_s`与`utterance_id`；字段与校验见技能workflow-contract.md。每项对应presentation_id与page_id，不以页名推测多人共用页的归属。所有页都要作出判断，不凑编号数量。
 
 遇到“这里、这条线、这个模块”等关键指代，先用`annotate_slides.py query "会议目录/captures" HH:MM:SS --window 4`查附近候选和句子，再查看对应采样图核对。它是稀疏CV候选，不是可靠点击或连续轨迹；不明确就不标。
 
 在annotation-plan.json列page_id及points，每点含number、time_s、utterance_id、reviewed:true，可用label_offset把号码移到不遮内容的位置。reviewed表示agent已核对候选帧与语句，不要求用户逐点批准。执行`annotate_slides.py render "会议目录/captures" "会议目录/annotation-plan.json"`；脚本从候选坐标做图像配准，输出编号副本与证据JSON，不接受随意猜的坐标。正文用①②明确引用对象，不必每页或每句都标。
 
 可直接写组会报告.md；或写组会讲稿源稿.md，以`![页名](slide:capture-NNN)`插图，再运行`render_report.py "会议目录"`自动选编号图或直接图片，并检查逐页覆盖。附录标题使用`## 材料与核查范围`，入库时换成库内材料入口。
+
+执行`python review_references.py check "会议目录"`，finish也会调用同一检查。输入材料变化后重新审阅，用init --reset生成待审记录；不能沿用失效决定。检查仅验证记录与产物的一致性，不代替语义和视觉判断。
+
+**标注检查结果只在对话中汇报。** 交付时说明检查页数、已标注/无需/证据不足的数量，列代表页和录像时间，简述重要未标注原因。不要把reference-review.json、检查清单、标注统计或“为什么没标”附录写进组会报告，也不把内部检查文件作为入库正文。报告中只呈现需要的编号图及其讲解。每个问题的AI补充解答仍保留在报告问答内，这与标注检查的对话汇报不同。
 
 ## 名片与Obsidian
 

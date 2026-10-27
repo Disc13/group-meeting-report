@@ -121,6 +121,7 @@ def finish(a,config):
     if not exports_ready(root) or a.rebuild_slides:
         if a.check_only:raise ValueError('Image exports are missing or changed')
         command([config['python'],WORKFLOW/'split_meeting.py',root],config)
+    reference_review=module('review_references').check(root)
     if not a.check_only:command([config['python'],WORKFLOW/'people_cards.py',root],config)
     vault=a.vault or config.get('vault')
     if vault:
@@ -130,9 +131,11 @@ def finish(a,config):
     if not a.check_only:
         path=root/'workflow.json';state=load(path) if path.exists() else {}
         state.update(report_generation='agent-reviewed illustrated speech and Q&A',report_exists=True,
-                     status='completed_for_supplied_materials',research_cards='人物名片.md')
+                     status='completed_for_supplied_materials',research_cards='人物名片.md',
+                     reference_review={k:reference_review[k] for k in ('counts','report_sha256','review_sha256')})
         path.write_bytes((json.dumps(state,ensure_ascii=False,indent=2)+'\n').encode('utf8'))
     print(json.dumps({'report':str(root/'组会报告.md'),'cards':str(root/'人物名片.md'),
+                      'annotation_review_for_chat':reference_review,
                       'obsidian_written':bool(vault) and not a.check_only},ensure_ascii=False,indent=2))
 
 

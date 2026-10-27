@@ -39,7 +39,7 @@ python scripts/meeting.py doctor
 
 2. **Agent整理。** 读RUN_AGENT.md与原材料，核对实际顺序、身份和短章节，写结构与选页，执行split_meeting.py。每人先介绍主题，再按每页实际发言插图润色、解释概念。问答逐项写“现场问题—现场回应—AI补充解答（非现场发言）”：AI直接回答并解释依据，需要核查的结论引用原论文或官方资料，不能把补充写成人物成果或导师决定。导师开场和结束发言单列，不另做行动清单。
 
-3. **按需编号。** 查关键指代附近的鼠标候选，核对证据帧后由annotate_slides.py生成编号副本，正文用①②引用。无需逐点让用户批准；证据不足不猜位置。命令及JSON字段见[数据契约](references/workflow-contract.md)。
+3. **逐页检查、按需编号。** 导出图片后用review_references.py init建立内部检查记录，逐页判断关键指代。查需要定位的语句附近的鼠标候选，核对证据帧后由annotate_slides.py生成编号副本，正文用①②引用。每页记录已标注、无需标注或证据不足；不设标注配额，不猜位置。检查统计与原因只在交付对话中汇报，报告只放必要编号图和讲解。命令及JSON字段见[数据契约](references/workflow-contract.md)。
 
 4. **完成与可选入库。** Agent写好组会报告.md及人物汇报提要.json后：
 
@@ -48,7 +48,7 @@ python scripts/meeting.py doctor
    python scripts/meeting.py finish meetings/example --vault '你的知识库目录'
    ```
 
-   第一条生成图片集与名片，第二条检查并写入显式指定的Obsidian目录。组会报告与人物互链，同人跨会议累积，手工补充保留。检查可用`--check-only`，重建图片用`--rebuild-slides`。
+   第一条校验逐页检查记录、生成图片集与名片，第二条检查并写入显式指定的Obsidian目录。待审页、失效记录或缺失的编号图引用会阻止交付。组会报告与人物互链，同人跨会议累积，手工补充保留。检查可用`--check-only`，重建图片用`--rebuild-slides`。
 
 图片按人保存，报告直接引用原图或编号PNG。Obsidian使用库内路径原生嵌入。PDF和截图PPTX是可选导出；截图不恢复可编辑公式或图表对象。
 

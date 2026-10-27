@@ -119,6 +119,7 @@ def render(root,plan,out):
                                     sample_sha256=hashlib.sha256(sample.read_bytes()).hexdigest()))
         destination=out/(target_id+'-numbered.png');paint.save(destination)
         result['pages'].append({'page_id':target_id,'image':str(destination.relative_to(root)),
+                                'image_sha256':hashlib.sha256(destination.read_bytes()).hexdigest(),
                                 'source_image':target['image'],'source_sha256':hashlib.sha256((root/target['image']).read_bytes()).hexdigest(),
                                 'annotations':annotations})
     save(out/'annotations.json',result)
